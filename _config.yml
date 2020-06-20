@@ -1,0 +1,13 @@
+# Site settings
+title: Pablo Jorge's blog
+email:
+description: Random writings
+baseurl: ""
+url: "https://pablojorge.github.io/"
+twitter_username: pablohjorge
+github_username:  pablojorge
+
+# Build settings
+theme: minima
+plugins:
+  - jekyll-feed
