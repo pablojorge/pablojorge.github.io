@@ -6,6 +6,7 @@ baseurl: ""
 url: "https://pablojorge.github.io/"
 twitter_username: pablohjorge
 github_username:  pablojorge
+google_analytics: UA-37907185-2
 
 # Build settings
 theme: minima
