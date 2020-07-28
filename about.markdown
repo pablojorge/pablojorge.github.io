@@ -4,33 +4,23 @@ title: About
 permalink: /about/
 ---
 
-I'm a software engineer, crypto enthusiast, traveller and proud nerd.
+I'm a software engineer, crypto enthusiast, traveller and proud nerd 🤓
 
-You can find more about my professional experience on my [LinkedIn][linkedin] page.
+Contact me: `pablojorge at 👋.com`
 
-Check my [GitHub][github] profile to see some of my projects.
+You can find more about my professional experience on my [LinkedIn][] page.
 
-My public PGP key is available here: [Keybase.io][keybase].
+Check my [GitHub][] profile to see some of my hobby projects.
 
-To follow my articles/books recommendations:
- * [Pocket][pocket]
- * [Instapaper] [instapaper]
- * [Medium][medium]
- * [Goodreads][goodreads]
+My public PGP key is available here: [Keybase.io][].
 
-Social profiles:
- * [Twitter][twitter]
- * [Instagram][instagram]
+To see my books recommendations, check my [Goodreads][] profile.
 
 [linkedin]: https://linkedin.com/in/pablojorge
 
-[pocket]: https://getpocket.com/@pablohjorge
-[instapaper]: https://www.instapaper.com/p/pablohjorge
-[medium]: https://medium.com/@pablohjorge
+[github]: https://github.com/pablojorge
+[keybase.io]: https://keybase.io/pjorge
+
 [goodreads]: https://www.goodreads.com/user/show/58161423-pablo-jorge
 
-[keybase]: https://keybase.io/pjorge
-[github]: https://github.com/pablojorge
-
-[twitter]: https://twitter.com/pablohjorge
 [instagram]: https://www.instagram.com/impaulgeorge/
