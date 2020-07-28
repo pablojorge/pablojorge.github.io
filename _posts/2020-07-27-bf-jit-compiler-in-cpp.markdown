@@ -7,9 +7,9 @@ categories: blog
 
 ## Intro
 
-As part of my collection of [Brainfuck][] interpreters (which includes, among others, an interpreter written in [pure ASM][asm], and others written in [C++][cpp]), I wanted to create one able to generate machine code on the fly, and execute it. Some sort of "handmade" JIT compiler, without relying on any library to achieve it.
+As part of my [collection of Brainfuck interpreters](https://github.com/pablojorge/brainfuck) (which includes, among others, an interpreter written in [pure ASM](https://github.com/pablojorge/brainfuck/blob/master/asm), and others written in [C++](https://github.com/pablojorge/brainfuck/tree/master/cpp)), I wanted to create one able to generate machine code on the fly, and execute it. Some sort of "handmade" JIT compiler, without relying on any library to achieve it.
 
-[Brainfuck][wikipedia] is a simple language that contains just a few operators: to read/write a single byte, move the data pointer, increment/decrement and loop. It's simple enough to easily create machine code equivalents for each, glue them together and execute the final result.
+[Brainfuck](https://en.wikipedia.org/wiki/Brainfuck) is a simple language that contains just a few operators: to read/write a single byte, move the data pointer, increment/decrement and loop. It's simple enough to easily create machine code equivalents for each, glue them together and execute the final result.
 
 The goal is to convert any Brainfuck program such as the following one into executable x86_64 code, in runtime, in C++:
 
@@ -28,11 +28,11 @@ At a high level, this is what's needed:
 - make the memory where the opcodes reside 'executable' (otherwise, attempting to execute the code will fail, as regular programs _shouldn't_ be executing code outside of the code sections of the process)
 - jump to the generated code
 
-(See the full source in <https://github.com/pablojorge/brainfuck/blob/master/cpp/brainfuck-jit.cpp>)
+The full source is [here](https://github.com/pablojorge/brainfuck/blob/master/cpp/brainfuck-jit.cpp). It works on MacOS, and was tested with Clang 11.0.3 and GCC 10.1.0.
 
 ## Parsing the BF source
 
-For this part, we can just reuse the existing [C++ parser][], which includes an extra benefit: "compressing" contiguous identical operators.
+For this part, we can just reuse the existing [C++ parser](https://github.com/pablojorge/brainfuck/blob/master/cpp/brainfuck.h), which includes an extra benefit: "compressing" contiguous identical operators.
 
 In the case of the sample BF program (`+++ [> ++++ <-]`), the resulting tree looks like this:
 
@@ -58,7 +58,7 @@ All the state we need to keep is the pointer to the current position in the main
 
 This means that for each BF operator, we need to generate opcodes that update it/use it accordingly.
 
-As a reference, this is the equivalent C-operation for each BF operator, where `ptr` is the pointer to the program memory -what we'll keep in RDI- (_adapted from the [BF to C translator](https://github.com/pablojorge/brainfuck/blob/master/haskell/bf2c.hs)_)
+As a reference, this is the C-equivalent for each BF operator, where `ptr` is the pointer to the program memory -what we'll keep in RDI- (_adapted from the [BF to C translator](https://github.com/pablojorge/brainfuck/blob/master/haskell/bf2c.hs)_)
 
 ```
     '>' = "++ptr;"            # forward
@@ -107,7 +107,7 @@ Also notice we move the pointer N places by 4, because each cell is 4-bytes long
 
 ### Increment/decrement the data pointed-to
 
-These are similar to the previous ones, but dereferencing the pointer. So, this is what we want to do:
+These are similar to the previous ones, but dereferencing the pointer. This is what we want to do:
 
 ```
   movq    N, %rax
@@ -129,11 +129,12 @@ Here, since we're operating on the _data_, the pointer is still 64 bits, but the
 
 ### Input/output
 
-Moving the pointer around and modifying data is cool, but unless we're fine with just inspecting the memory, it'd be even better to interact with the outside world.
+Moving the pointer around and modifying data are, but we need the need to also interact with the outside world.
 
 Now it starts to get interesting, as we'll need to execute syscalls to read/write from/to stdin/stdout.
 
-From the original [.s source][asm], this is how the read/write syscalls can be invoked in Mac OS:
+Using the original [asm interpreter](https://github.com/pablojorge/brainfuck/blob/master/asm/brainfuck.s) as reference, this is how the `read`/`write` syscalls can be invoked in MacOS:
+
 ```
  # ssize_t read(int fildes, void *buf, size_t nbyte);
  #              rdi         rsi        rdx
@@ -152,11 +153,11 @@ From the original [.s source][asm], this is how the read/write syscalls can be i
  syscall
 ```
 
-The file descriptors goes into RDI, the input/output buffer goes in RSI, the count in RDX and finally the syscall descriptor in RAX. Then we execute the `syscall` instruction.
+The file descriptor goes into RDI, the input/output buffer goes in RSI, the count in RDX and finally the syscall descriptor in RAX. Then we execute the `syscall` instruction (what was done with `int 0x80` in the past)
 
-The problem is that we need to use RDI, but we use it to hold the data pointer. We can easily solve it by pushing it to the stack and restoring it after we're done.
+The problem is that we need to use RDI, but we use it to hold the data pointer. We can easily solve this by pushing RDI to the stack and restoring it after we're done.
 
-To write a single byte to stdout, this is what we need: (`read` is similar, only the syscall descriptor -0x2000003- and the fd -0, stdout- change):
+To write a single byte to stdout, this is what we need: (`read` is similar, only the syscall descriptor -`0x2000003`- and the fd -`0, stdout`- change):
 
 ```
   pushq   %rdi              # save RDI
@@ -291,9 +292,13 @@ This is the full solution:
 
 ## Marking the memory as executable
 
-For security reasons, dynamic memory is not executable by default. That would prevent our awesome generated code from executing! To avoid this problem, we need to put all generated code in an area obtained with `mmap()`, since we can ask for those pages to be executable at allocation time (or even better, later, so that those pages are never writable AND executable _at the same_time_)
+For security reasons, dynamic memory is not executable by default. That would prevent our awesome generated code from running! To avoid this problem, we need to mark the pages where the code resides as executable.
 
-We initialize the buffer that will contain the generated code in read/write mode:
+We can either allocate some pages and mark them as executable right away, or even better, allocate them and update them later, after the code has been generated. This a good practice, as it guarantees that the pages are not _writable_ and _executable_ at the same time at any moment.
+
+Since we can't mark _any_ position as executable, we need to mark full pages, we still need to use `mmap()` to allocate, since the memory allocated will be on a page boundary.
+
+Here we initialize the buffer that will contain the generated code in read/write mode:
 
 ```c++
     ExecutableBuffer(size_t size) {
@@ -350,6 +355,12 @@ Using LLDB to inspect the memory and the generated code:
 Memory before execution:
 
 ```
+$ lldb -s lldb-commands.txt ./brainfuck-jit -- test.bf
+[...]
+(lldb) b JITProgram::run
+Breakpoint 1: where = brainfuck-jit`main + 1142 [inlined] JITProgram::run() at brainfuck-jit.cpp:288, address = 0x00000001000021f6
+(lldb) r
+[...]
 (lldb) p &memory
 (uint32_t (*)[30000]) $0 = 0x00007ffeefbe2230
 (lldb) x $0
@@ -362,9 +373,12 @@ Generated code:
 ```
 (lldb) p buf_.buf_
 (uint8_t *) $1 = 0x0000000100500000 "H��\x03"
-(lldb) x $1
+(lldb) x -c 80 $1
 0x100500000: 48 c7 c0 03 00 00 00 01 07 83 3f 00 0f 84 2f 00  H��.......?.../.
 0x100500010: 00 00 48 c7 c0 04 00 00 00 48 01 c7 48 c7 c0 04  ..H��....H.�H��.
+0x100500020: 00 00 00 01 07 48 c7 c0 04 00 00 00 48 29 c7 48  .....H��....H)�H
+0x100500030: c7 c0 01 00 00 00 29 07 83 3f 00 0f 85 d1 ff ff  ��....)..?...���
+0x100500040: ff c3 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ��..............
 (lldb) disas -b -s $1 -c 40
     0x100500000: 48 c7 c0 03 00 00 00  movq   $0x3, %rax
     0x100500007: 01 07                 addl   %eax, (%rdi)
@@ -391,22 +405,15 @@ Memory AFTER execution:
 0x7ffeefbe2240: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
 ```
 
-First 4 bytes (1st cell) are 0, the next 4 bytes (2nd cell) are 0c 00 00 00, 0x0c in little endian (12), just as expected.
+The first 4 bytes (the 1st cell) are `00 00 00 00`, and the next 4 (2nd cell) are `0c 00 00 00`, `0x0c` in little endian (12), just as expected.
 
 ## Benchmark
 
-Heavy BF programs like the Mandelbrot Set or the prime numbers generators run much faster compared to the optimized interpreters:
+Heavy BF programs like the Mandelbrot Set generator, or the prime numbers generator run much faster compared to the optimized interpreters:
 
-|             | Primes up to 200| Mandelbrot|
-| -----------:| ---------------:| ---------:|
-|            C|           3878ms|    14619ms|
-|         Rust|           4123ms|     7270ms|
-|         C++ |           2827ms|     5272ms|
-| **C++-JIT** |        **644ms**| **1157ms**|
-
-
-[brainfuck]: https://github.com/pablojorge/brainfuck
-[asm]: https://github.com/pablojorge/brainfuck/blob/master/asm
-[cpp]: https://github.com/pablojorge/brainfuck/tree/master/cpp
-[wikipedia]: https://en.wikipedia.org/wiki/Brainfuck
-[c++ parser]: https://github.com/pablojorge/brainfuck/blob/master/cpp/brainfuck.h
+|             | Primes up to 200| Mandelbrot Set|
+| -----------:| ---------------:| -------------:|
+|            C|           3878ms|        14619ms|
+|         Rust|           4123ms|         7270ms|
+|         C++ |           2827ms|         5272ms|
+| **C++-JIT** |      _**644ms**_|   _**1157ms**_|
