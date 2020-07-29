@@ -129,7 +129,7 @@ Here, since we're operating on the _data_, the pointer is still 64 bits, but the
 
 ### Input/output
 
-Moving the pointer around and modifying data are, but we need the need to also interact with the outside world.
+Moving the pointer around and modifying data in memory are fine, but we need to interact with the outside world as well.
 
 Now it starts to get interesting, as we'll need to execute syscalls to read/write from/to stdin/stdout.
 
