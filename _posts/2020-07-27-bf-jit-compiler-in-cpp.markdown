@@ -71,7 +71,7 @@ As a reference, this is the C-equivalent for each BF operator, where `ptr` is th
     ']' = "}"                 # loop end
 ```
 
-### Increment/decrement the pointer
+### Moving the pointer forward/backward
 
 These are the simplest ones: we need to increment/decrement the RDI register by N. We can use the RAX register as auxiliary:
 
@@ -129,9 +129,9 @@ Here, since we're operating on the _data_, the pointer is still 64 bits, but the
 
 ### Input/output
 
-Moving the pointer around and modifying data in memory are fine, but we need to interact with the outside world as well.
+Moving the pointer around and modifying data in memory are fine, but we need to interact with the outside world as well!
 
-Now it starts to get interesting, as we'll need to execute syscalls to read/write from/to stdin/stdout.
+Now it starts to get interesting, as we'll need to execute syscalls to read/write from/to stdin/stdout. This is in fact easier than using the libc for example, as we'll talk directly with the kernel.
 
 Using the original [asm interpreter](https://github.com/pablojorge/brainfuck/blob/master/asm/brainfuck.s) as reference, this is how the `read`/`write` syscalls can be invoked in MacOS:
 
